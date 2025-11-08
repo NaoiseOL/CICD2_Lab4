@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from .database import engine, SessionLocal
 from .models import Base, UserDB, CourseDB, ProjectDB
 from .schemas import (
-    UserCreate, UserRead,
+    UserCreate, UserRead, UserUpdate,
     CourseCreate, CourseRead,
     ProjectCreate, ProjectRead,
     ProjectReadWithOwner, ProjectCreateForUser
@@ -182,4 +182,31 @@ def replace_user(user_id: int, payload: UserCreate, db: Session = Depends(get_db
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="User update Failed")
+    return user
+
+@app.delete("/api/users/{user_id}", status_code=204)
+def delete_user(user_id: int, db: Session = Depends(get_db)) -> Response:
+    user = db.get(UserDB, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete_user
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.patch("/api/users/{user_id}", response_model=UserRead)
+def patch_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)):
+    user = db.get(UserDB, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Only update fields that are provided
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+
+    try:
+        db.commit()
+        db.refresh(user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="User patch failed")
     return user

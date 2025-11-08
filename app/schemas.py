@@ -29,6 +29,12 @@ class UserRead(BaseModel):
     age: AgeInt
     student_id: StudentId
 
+class UserUpdate(BaseModel):
+    name: Optional[NameStr] = None
+    email: Optional[EmailStr] = None
+    age: Optional[AgeInt] = None
+    student_id: Optional[StudentId] = None
+
 
 # Optionally return users with their projects
 class ProjectRead(BaseModel):
