@@ -56,6 +56,10 @@ class ProjectCreate(BaseModel):
     description: Optional[DescStr] = None
     owner_id: int
 
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    owner_id: Optional[int] = None
 
 # Nested route: POST /api/users/{user_id}/projects (owner implied by path)
 class ProjectCreateForUser(BaseModel):

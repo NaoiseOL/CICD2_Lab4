@@ -8,7 +8,7 @@ from .models import Base, UserDB, CourseDB, ProjectDB
 from .schemas import (
     UserCreate, UserRead, UserUpdate,
     CourseCreate, CourseRead,
-    ProjectCreate, ProjectRead,
+    ProjectCreate, ProjectRead, ProjectUpdate,
     ProjectReadWithOwner, ProjectCreateForUser
 )
 
@@ -210,3 +210,36 @@ def patch_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db))
         db.rollback()
         raise HTTPException(status_code=409, detail="User patch failed")
     return user
+
+@app.patch("/api/projects/{project_id}", response_model=ProjectRead)
+def patch_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db)):
+    proj = db.get(ProjectDB, project_id)
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # If owner_id is being updated, validate the new owner exists
+    if payload.owner_id is not None:
+        owner = db.get(UserDB, payload.owner_id)
+        if not owner:
+            raise HTTPException(status_code=404, detail="Owner user not found")
+
+    # Apply updates only to provided fields
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(proj, field, value)
+
+    try:
+        db.commit()
+        db.refresh(proj)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Project patch failed")
+    return proj
+
+@app.delete("/api/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(project_id: int, db: Session = Depends(get_db)) -> Response:
+    proj = db.get(ProjectDB, project_id)
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+    db.delete(proj)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
