@@ -164,3 +164,22 @@ def add_user(payload: UserCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=409, detail="User already exists")
     return user
+
+@app.put("/api/users/{user_id}", response_model=UserRead)
+def replace_user(user_id: int, payload: UserCreate, db: Session = Depends(get_db)):
+    user = db.get(UserDB, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.name = payload.name
+    user.email = payload.email
+    user.age = payload.age
+    user.student_id = payload.student_id
+
+    try:
+        db.commit()
+        sb.refresh(user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="User update Failed")
+    return user
